@@ -1,0 +1,19 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  labels:
+    operators.coreos.com/mcg-operator.openshift-storage: ""
+  name: mcg-operator
+  namespace: openshift-storage
+  ownerReferences:
+  - apiVersion: operators.coreos.com/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Subscription
+    name: odf-operator
+    uid: 6a153d26-98b9-44e4-9c95-9f8b380f55b9
+spec:
+  installPlanApproval: Automatic
+  name: mcg-operator
+  source: redhat-operator-index
+  sourceNamespace: openshift-marketplace

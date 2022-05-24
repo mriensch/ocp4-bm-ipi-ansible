@@ -1,0 +1,12 @@
+//forward zone
+zone {{ cluster_name }}.{{ cluster_domain }} IN {
+        type master;
+        file "{{ cluster_name }}.{{ cluster_domain }}.zone";
+
+};
+//backward zone
+zone "{{ ansible_default_ipv4.address.split('.')[2] }}.{{ ansible_default_ipv4.address.split('.')[1] }}.{{ ansible_default_ipv4.address.split('.')[0] }}.in-addr.arpa" IN {
+        type master;
+        file "{{ cluster_name }}.{{ cluster_domain }}.rzone";
+
+};

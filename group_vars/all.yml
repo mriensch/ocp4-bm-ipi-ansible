@@ -1,0 +1,111 @@
+### ENV
+managment_hostname: cluster-manager
+cluster_name: ocp
+cluster_domain: example.com
+base_dir: /opt/ocp
+username: superman
+password: clarkkent
+user_namespaces: 1
+binary_locations: "{{ playbook_dir }}/bin"
+binary_dest: '/usr/local/sbin'
+mac_prefix: aa:bb:cc
+
+## REGISTRY
+registry_pod_name: registry
+registry_volume: "{{ base_dir}}/registry"
+registry_port: 5000
+registry_username: "{{ username }}"
+registry_password: "{{ password }}"
+certs_location: "{{ role_path }}/files"
+cert_key_name: domain.key
+cert_crt_name: domain.crt
+cert_names:
+  - type: key
+    name: "{{ cert_key_name }}"
+  - type: cert
+    name: "{{ cert_crt_name }}"
+
+## NETWORKING INFRA
+managment_network: 192.168.0
+managment_cidr: "{{ managment_network }}.0/24"
+managment_broadcast: "{{ managment_network }}.255"
+managment_gateway: "{{ managment_network }}.1"
+machine_network: 192.168.1
+machine_cidr: "{{ machine_network }}.0/24"
+machine_broadcast: "{{ machine_network }}.255"
+machine_gateway: "{{ machine_network }}.1"
+dhcp_1st_addr: "{{ machine_network }}.115"
+dhcp_last_addr: "{{ machine_network }}.125"
+machine_network_subnet_mask: 255.255.255.0
+dhcp_range: "{{ dhcp_1st_addr }},{{ dhcp_last_addr }},{{ machine_network_subnet_mask }},1h"
+dhcp_options: '-4'
+machine_network_router: "{{ machine_network }}.1"
+domain_nameserver_name: ns
+domain_nameserver_ip: "{{ machine_network }}.1"
+domain_controller_name: dc01
+domain_controller_ip: "{{ machine_network }}.1"
+ntp_sources:
+  - type: pool
+    address: 2.rhel.pool.ntp.org
+
+## OC-MIRROR
+oc_mirror_location: /mnt
+oc_mirror_tar_location: "{{ oc_mirror_location }}/mirror_seq1_000000.tar"
+oc_mirror_workspace: "{{ base_dir }}/oc-mirror-workspace"
+
+## OPENSHIFT NETWORKING
+ocp_baremetal_bridge: baremetal
+
+##RHCOS_IMAGE_CACHE
+rhcos_image_cache: "{{ base_dir}}/rhcos_images"
+rhcos_image_name:
+rhcos_bootstrap_image_sha: 
+
+## OPENSHIFT
+ocp_install_dir: "{{ base_dir}}/ocp-install"
+network_type: OVNKubernetes
+api_ip: "{{ machine_network }}.2"
+ingress_ip: "{{ machine_network }}.3"
+node_hostname_schema: ocp-node
+nodes:
+  - name: "{{ node_hostname_schema }}0"
+    role: master
+    bmc_address: "{{ managment_network }}.4"
+    net_address: "{{ machine_network }}.4"
+    boot_mac: "{{ mac_prefix }}:dd:ee:8c"
+    ten_gig_mac_2: "{{ mac_prefix }}:dd:ee:8d"
+    ten_gig_mac_3: "{{ mac_prefix }}:dd:ee:8e"
+    ten_gig_mac_4: "{{ mac_prefix }}:dd:ee:8f"
+  - name: "{{ node_hostname_schema }}1"
+    role: master
+    bmc_address: "{{ managment_network }}.5"
+    net_address: "{{ machine_network }}.5"
+    boot_mac: "{{ mac_prefix }}:dd:ee:dd"
+    ten_gig_mac_2: "{{ mac_prefix }}:dd:ee:de"
+    ten_gig_mac_3: "{{ mac_prefix }}:dd:ee:df"
+    ten_gig_mac_4: "{{ mac_prefix }}:dd:ee:e0"
+  - name: "{{ node_hostname_schema }}2"
+    role: master
+    bmc_address: "{{ managment_network }}.6"
+    net_address: "{{ machine_network }}.6"
+    boot_mac: "{{ mac_prefix }}:dd:ee:13"
+    ten_gig_mac_2: "{{ mac_prefix }}:dd:ee:14"
+    ten_gig_mac_3: "{{ mac_prefix }}:dd:ee:15"
+    ten_gig_mac_4: "{{ mac_prefix }}:dd:ee:16"   
+  - name: "{{ node_hostname_schema }}3"
+    role: worker
+    bmc_address: "{{ managment_network }}.7"
+    net_address: "{{ machine_network }}.7"
+    boot_mac: "{{ mac_prefix }}:dd:ee:22"
+    ten_gig_mac_2: "{{ mac_prefix }}:dd:ee:23"
+    ten_gig_mac_3: "{{ mac_prefix }}:dd:ee:24"
+    ten_gig_mac_4: "{{ mac_prefix }}:dd:ee:25"
+node_redfish_username: batman
+node_redfish_password: 'brucewayne'
+networking:
+  - name: br1
+    iface_one: eno3
+    iface_two: eno4
+    bond: bond0
+    ip_address: "{{ machine_network }}.151"
+    ip_prefix_length: 24

@@ -1,0 +1,4 @@
+- hosts: localhost
+  roles:
+  - temp-web-server
+  - openshift-install

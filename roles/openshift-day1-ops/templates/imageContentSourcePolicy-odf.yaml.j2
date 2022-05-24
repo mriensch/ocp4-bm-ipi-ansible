@@ -1,0 +1,22 @@
+---
+apiVersion: operator.openshift.io/v1alpha1
+kind: ImageContentSourcePolicy
+metadata:
+  name: odf
+spec:
+  repositoryDigestMirrors:
+  - mirrors:
+    - {{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}:{{ registry_port }}/odf4
+    - {{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}:{{ registry_port }}/ocs4
+    source: registry.redhat.io/odf4
+---
+apiVersion: operator.openshift.io/v1alpha1
+kind: ImageContentSourcePolicy
+metadata:
+  name: ocs
+spec:
+  repositoryDigestMirrors:
+  - mirrors:
+    - {{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}:{{ registry_port }}/odf4
+    - {{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}:{{ registry_port }}/ocs4
+    source: registry.redhat.io/ocs4

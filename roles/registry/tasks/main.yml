@@ -1,0 +1,106 @@
+- name: "{{ role_name }} | Test podman for {{ ansible_user }}"
+  shell: 
+    cmd: "podman ps --format '{{ '{{' }} .Names {{ '}}' }}'"
+  register: podman_results
+  failed_when: 
+    - "podman_results.rc !=125 and 'user namespaces are not enabled' not in podman_results.stderr"
+    - "podman_results.rc !=0"
+
+- name: "{{ role_name }} | Allow canes.adm to use podman via sysctl"
+  lineinfile:
+    path: /etc/sysctl.conf
+    regexp: 'user\.max_user_namespaces = 0'
+    line: user.max_user_namespaces = {{ user_namespaces }}
+  become: true
+  when: '"user namespaces are not enabled" in podman_results.stderr'
+
+- name: "{{ role_name }} | Reload sysctl"
+  command:
+    cmd: sysctl -p
+  become: true
+  when: '"user namespaces are not enabled" in podman_results.stderr'
+
+- name: "{{ role_name }} | Changing group of /opt to wheel"
+  file:
+    mode: 0774
+    path: /opt
+    owner: root
+    group: wheel
+  become: true
+
+- name: "{{ role_name }} | Create Directories"
+  file:
+    mode: '0774'
+    path: '{{ item }}'
+    state: directory
+    owner: sysadmin
+    group: wheel
+  with_items:
+      - "{{ ansible_user_dir }}/.docker/"
+      - "{{ base_dir }}"
+      - "{{ registry_volume }}/data"
+      - "{{ registry_volume }}/auth"
+      - "{{ registry_volume }}/certs"
+  become: true
+
+- name: "{{ role_name }} | Import Regstry Image"
+  command:
+    cmd: podman load -i {{ role_path}}/files/registry.tar
+
+- name: "{{ role_name }} | Generate Registry Basic Auth"
+  command:
+    cmd: htpasswd -Bbn {{ registry_username }} {{ registry_password }}
+  register: bcrypt_htpasswd
+
+- name: "{{ role_name }} | Write Registry htpasswd credential config"
+  copy:
+    content: '{{ bcrypt_htpasswd.stdout }}'
+    dest: '{{ registry_volume }}/auth/htpasswd'
+    mode: 0760
+
+- name: "{{ role_name }} | Generate encrypted password"
+  shell:
+    cmd: "echo {{ registry_username }}:{{ registry_password }} | base64 -w0"
+  register: docker_pass
+
+- name: "{{ role_name }} | Copy over pre-generated certs"
+  copy:
+    src: "{{ certs_location }}/{{ item['name'] }}"
+    dest: "{{ registry_volume }}/certs"
+  with_items: "{{ cert_names }}"
+
+- name: "{{ role_name }} | Create Registry Container"
+  command:
+    cmd: podman create --name {{ registry_pod_name }} -p {{ registry_port }}:5000 -e "REGISTRY_AUTH=htpasswd" -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry" -e "REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd" -e "REGISTRY_HTTP_TLS_CERTIFICATE=/certs/{{ cert_crt_name }}" -e "REGISTRY_HTTP_TLS_KEY=/certs/{{ cert_key_name }}" -e "REGISTRY_COMPATIBILITY_SCHEMA1_ENABLED=true" -v {{ registry_volume }}/data:/var/lib/registry:z -v {{ registry_volume }}/auth:/auth:z -v {{ registry_volume }}/certs:/certs:z docker.io/library/registry:latest
+  register: container_created
+  when: "registry_pod_name not in podman_results.stdout"
+
+- name: "{{ role_name }} | Start Registry Container"
+  command:
+     cmd: podman start {{ registry_pod_name }}
+  register: container_started
+  retries: 5
+  delay: 2
+  until: container_started.rc == 0
+  when: container_created is defined
+
+- name: "{{ role_name }} | Open port {{ registry_port }} on the firewall permanently"
+  firewalld: 
+    port: "{{ registry_port }}/tcp"
+    permanent: yes
+    immediate: yes
+    state: enabled
+  become: true
+
+- name: "{{ role_name }} | Login to registry"
+  command:
+     cmd: podman login https://{{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}:{{ registry_port }} --username {{ registry_username }} --password {{ registry_password }} --tls-verify=false
+  register: registry_logedin
+  retries: 5
+  delay: 2
+  until: registry_logedin.rc == 0 
+
+- name: "{{ role_name }} | copy /run/user/1000/containers/auth.json to {{ ansible_user_dir }}/.docker/config.json"
+  copy:
+    src: /run/user/1000/containers/auth.json
+    dest: "{{ ansible_user_dir }}/.docker/config.json"

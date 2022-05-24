@@ -1,0 +1,57 @@
+- name: "{{ role_name }} | Remove System {{ ansible_default_ipv4.interface }}"
+  nmcli:
+    conn_name: "{{ ansible_default_ipv4.interface }}"
+    type: ethernet
+    state: absent
+  become: true
+    
+- name: "{{ role_name }} | Create the bridge | named {{ ocp_baremetal_bridge }}"
+  nmcli:
+    conn_name: "{{ ocp_baremetal_bridge }}"
+    type: bridge
+    ifname: "{{ ocp_baremetal_bridge }}"
+    state: present
+    autoconnect: yes
+    ip4: "{{ ansible_default_ipv4.address }}/24"
+    dns4: "{{ ansible_default_ipv4.address }}"
+    dns4_search: "{{ cluster_name }}.{{ cluster_domain }}"
+    stp: off
+  become: true
+
+- name: "{{ role_name }} | Add {{ ansible_default_ipv4.interface }} as the {{ ocp_baremetal_bridge }} bridge-slave"
+  #command:
+  #  cmd: nmcli con add type bridge-slave ifname {{ ansible_default_ipv4.interface }} master baremetal
+  nmcli:
+    conn_name: "{{ ansible_default_ipv4.interface }}-slave"
+    type: bridge-slave
+    hairpin: no
+    ifname: "{{ ansible_default_ipv4.interface }}"
+    master: "{{ ocp_baremetal_bridge }}"
+    state: present
+    autoconnect: yes
+  become: true
+
+- name: "{{ role_name }} | Set {{ ocp_baremetal_bridge }} to ipv4.method: manual"
+  command:
+    cmd: "nmcli connection modify {{ ocp_baremetal_bridge }} ipv4.method manual"
+  become: true
+
+- name: "{{ role_name }} | Set {{ ocp_baremetal_bridge }} to use {{ ansible_default_ipv4.interface }} as DNS"
+  command:
+    cmd: "nmcli connection modify {{ ocp_baremetal_bridge }} ipv4.dns {{ ansible_default_ipv4.address }}"
+  become: true
+
+- name: "{{ role_name }} | Set {{ ocp_baremetal_bridge }} to use {{ machine_gateway }} as gateway"
+  command:
+    cmd: "nmcli connection modify {{ ocp_baremetal_bridge }} ipv4.gateway {{ machine_gateway }}"
+  become: true
+
+
+- name: "{{ role_name }} | Set {{ ocp_baremetal_bridge }} to use {{ cluster_name }}.{{ cluster_domain }} as search Domain"
+  command:
+    cmd: "nmcli connection modify {{ ocp_baremetal_bridge }} ipv4.dns-search {{ cluster_name }}.{{ cluster_domain }}"
+  become: true
+
+- name:  "{{ role_name }} | Reload {{ ocp_baremetal_bridge }} bridge and slave interfaces"
+  shell: |
+    /usr/bin/nmcli con reload {{ ocp_baremetal_bridge }}; /usr/bin/nmcli con up {{ ocp_baremetal_bridge }}

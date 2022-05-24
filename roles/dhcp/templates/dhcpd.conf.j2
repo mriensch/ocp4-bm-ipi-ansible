@@ -1,0 +1,35 @@
+#
+# DHCP Server Configuration file.
+#   see /usr/share/doc/dhcp-server/dhcpd.conf.example
+#   see dhcpd.conf(5) man page
+#
+option domain-name "{{ cluster_name }}.{{ cluster_domain }}";
+option routers {{ machine_network_router }}";
+option subnet-mask {{ machine_network_subnet_mask }};
+option ntp-servers {{ ansible_default_ipv4.address }};
+option domain-name-servers {{ ansible_default_ipv4.address }};
+option time-servers {{ ansible_default_ipv4.address }};
+
+
+authoritative;
+
+subnet 164.191.1.0 netmask {{ machine_network_subnet_mask }} {
+        range {{ dhcp_1st_addr }} {{ dhcp_last_addr }};
+        option subnet-mask {{ machine_network_subnet_mask }};
+        option domain-name-servers {{ ansible_default_ipv4.address }};
+        option routers {{ machine_network_router }};
+        option broadcast-address {{ machine_broadcast }};
+        default-lease-time 600;
+        max-lease-time 7200;
+}
+
+{% for node in nodes %}
+host {{ node.name }}.{{ cluster_name }}.{{ cluster_domain }} {
+        hardware ethernet {{ node.boot_mac }};
+        fixed-address {{ node.net_address }};
+        option domain-name-servers {{ ansible_default_ipv4.address }};
+        option routers {{ machine_network_router }};
+        option broadcast-address {{ machine_broadcast }};
+        default-lease-time -1;
+        max-lease-time -1;
+{% endfor %}

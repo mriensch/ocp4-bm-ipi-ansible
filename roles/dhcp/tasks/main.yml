@@ -1,0 +1,64 @@
+- name: "{{ role_name }} | Copy forward_zone template to /var/named/{{ cluster_name }}.{{ cluster_domain }}.zone"
+  template:
+    src: forward_zone.j2
+    dest: /var/named/{{ cluster_name }}.{{ cluster_domain }}.zone
+  become: true
+
+- name: "{{ role_name }} | Copy domain_zone template to /var/named/{{ cluster_domain }}.zone"
+  template:
+    src: domain_zone.j2
+    dest: /var/named/{{ cluster_domain }}.zone
+  become: true
+
+- name: "{{ role_name }} | Copy forward_rzone template to /var/named/{{ cluster_name }}.{{ cluster_domain }}.rzone"
+  template:
+    src: forward_rzone.j2
+    dest: /var/named/{{ cluster_name }}.{{ cluster_domain }}.rzone
+  become: true
+
+- name: "{{ role_name }} | Copy forward_zones template to /etc/named/{{ cluster_name }}.{{ cluster_domain }}.zones"
+  template:
+    src: forward_zones.j2
+    dest: /etc/named/{{ cluster_name }}.{{ cluster_domain }}.zones
+    mode: '0666'
+  become: true
+
+- name: "{{ role_name }} | Copy domain_zones template to /etc/named/{{ cluster_domain }}.zones"
+  template:
+    src: domain_zones.j2
+    dest: /etc/named/{{ cluster_domain }}.zones
+    mode: '0666'
+  become: true
+
+- name: "{{ role_name }} | Copy named.rfc1912.zones template to /etc/named.rfc1912.zones"
+  template:
+    src: named.rfc1912.zones.j2
+    dest: /etc/named.rfc1912.zones
+  become: true
+
+- name: "{{ role_name }} | Copy named.conf template to /etc/named.conf"
+  template:
+    src: named.conf.j2
+    dest: /etc/named.conf 
+  become: true
+
+- name: "{{ role_name }} | Copy named template to /etc/sysconfig/named"
+  template:
+    src: named.j2
+    dest: /etc/sysconfig/named
+  become: true
+
+- name:  "{{ role_name }} | Start and enable named"
+  ansible.builtin.service:
+    name: named
+    state: started
+    enabled: yes
+  become: true
+
+- name: "{{ role_name }} | Add the DHCP service to the firewall permanently"
+  firewalld: 
+    service: dhcp
+    permanent: yes
+    immediate: yes
+    state: enabled
+  become: true

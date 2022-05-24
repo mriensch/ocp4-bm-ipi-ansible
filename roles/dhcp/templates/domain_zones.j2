@@ -1,0 +1,6 @@
+//forward zone
+zone {{ cluster_domain }} IN {
+        type master;
+        file "{{ cluster_domain }}.zone";
+
+};

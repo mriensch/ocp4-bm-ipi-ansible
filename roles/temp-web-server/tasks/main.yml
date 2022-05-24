@@ -1,0 +1,13 @@
+- name: "{{ role_name }} | Open port 8000 on the firewall"
+  firewalld: 
+    port: 8000/tcp
+    permanent: no
+    immediate: yes
+    state: enabled
+  become: true
+  
+- name: "{{ role_name }} | Create the temporary webserver | runs in background via tmux"
+  shell:
+    cmd: 'tmux new-session -d -s temp-webserver python3 -m http.server'
+  args:
+    chdir: "{{ rhcos_image_cache }}"

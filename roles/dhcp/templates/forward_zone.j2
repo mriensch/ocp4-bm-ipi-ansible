@@ -1,0 +1,17 @@
+$TTL    86400
+@               IN SOA  {{ cluster_name }}.{{ cluster_domain }}. root (
+42              ; serial
+3H              ; refresh
+15M             ; retry
+1W              ; expiry
+1D )            ; minimum
+        IN      NS      {{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}.
+;use IP address of named machine for ns
+ns      IN      A       {{ ansible_default_ipv4.address }}
+{{ managment_hostname }}     IN     A       {{ ansible_default_ipv4.address }}
+*.apps          IN      A      {{ ingress_ip }}
+api            IN      A       {{ api_ip }}
+api-int        IN      A       {{ api_ip }}
+{% for node in nodes %}
+{{ node.name }}     IN      A       {{ node.net_address }}
+{% endfor %}

@@ -1,0 +1,14 @@
+- name: "{{ role_name }} | Openning up the tar location of {{ oc_mirror_location }}"
+  file:
+    mode: 0774
+    path: "{{ oc_mirror_location }}"
+    recurse: yes
+    owner: sysadmin
+    group: wheel
+  become: true
+
+- name: "{{ role_name }} | Push mirror-ed content into host Registry | Takes around an hour"
+  command:
+    cmd: 'oc-mirror --from {{ oc_mirror_tar_location }} docker://{{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}:5000 --dest-skip-tls'
+  args:
+    chdir: "{{ base_dir }}"

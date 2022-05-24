@@ -1,0 +1,43 @@
+- name: "{{ role_name }} | Create {{ ansible_user_dir }}/.kube"
+  file:
+    mode: '0774'
+    path: '{{ ansible_user_dir }}/.kube'
+    state: directory
+
+- name: "{{ role_name }} | Copy cluster kubeconfig to {{ ansible_user_dir }}/.kube/config"
+  copy:
+    src: "{{ ocp_install_dir }}/auth/kubeconfig"
+    dest: "{{ ansible_user_dir }}/.kube/config"
+
+- name: "{{ role_name }} | Disable all the default marketplace sources"
+  shell:
+    cmd: |
+      oc patch OperatorHub cluster --type json -p '[{"op": "add", "path": "/spec/disableAllDefaultSources", "value": true}]'
+
+- name: "{{ role_name }} | Clear Channel upgrade path"
+  shell:
+    cmd: |
+      oc patch clusterversion version --type json -p '[{"op": "add", "path": "/spec/channel", "value": }]'
+
+- name: "{{ role_name }} | Discover results directory name"
+  find: 
+    paths: "{{ oc_mirror_workspace }}"
+    pattern: 'results-*'
+    recurse: no
+    file_type: directory
+  register: oc_mirror_results_dir
+
+- name: "{{ role_name }} | Apply the oc-mirror content"
+  include_tasks: apply.yml
+  with_items: "{{ oc_mirror_results_dir.files }}"
+
+- name: "{{ role_name }} | Create list of Openshift Operator Subscriptions"
+  find: 
+    paths: "{{ role_path}}/files/"
+    patterns: '*.yaml,*.yml'
+  register: operators
+
+- name: "{{ role_name }} | Apply the Openshift Operator Subscriptions"
+  command:
+    cmd: "oc apply -f {{ item.path }}"
+  with_items: "{{ operators.files }}"

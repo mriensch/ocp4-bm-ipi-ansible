@@ -1,0 +1,30 @@
+- name: "{{ role_name }} | Create the Image cache directory"
+  file:
+    mode: '0744'
+    path: "{{ rhcos_image_cache }}"
+    state: directory
+
+- name: "{{ role_name }} | Create list of Red Hat CoreOS images"
+  find: 
+    paths: "{{ role_path}}/files/"
+    patterns: '*.gz'
+  register: rhcos_images
+
+- name: "{{ role_name }} | Copy over Red Hat CoreOS images"
+  copy: 
+    src: "{{ item.path }}"
+    dest: '{{ rhcos_image_cache }}'
+  with_items: "{{ rhcos_images.files }}"
+
+- name: "{{ role_name }} | Setting SElinux content on {{ rhcos_image_cache }}"
+  command:
+    cmd: semanage fcontext -a -t httpd_sys_content_t "{{ rhcos_image_cache }}(/.*)?"
+  become: true
+  register: selinux_context
+  failed_when: "selinux_context.rc >=1 and 'already definded' in selinux_context.stderr"
+
+- name: "{{ role_name }} | Run restorecon on {{ rhcos_image_cache }}"
+  command:
+    cmd: restorecon -Rv {{ rhcos_image_cache }}
+  become: true
+  when: "selinux_context.rc >=1 and 'already definded' in selinux_context.stderr"

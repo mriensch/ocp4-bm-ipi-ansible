@@ -1,0 +1,4 @@
+- name: "{{ role_name }} | Set hostname with FQDN"
+  command:
+    cmd: "hostnamectl set-hostname {{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}"
+  become: true

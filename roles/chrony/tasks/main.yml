@@ -1,0 +1,20 @@
+- name: "{{ role_name }} | Copy template to /etc/chrony.conf"
+  template:
+    src: chrony.conf.j2
+    dest: /etc/chrony.conf
+  become: true
+
+- name:  "{{ role_name }} | Start and enable chronyd"
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: yes
+  become: true
+
+- name: "{{ role_name }} | Add the ntp service to the firewall permanently"
+  firewalld: 
+    service: ntp
+    permanent: yes
+    immediate: yes
+    state: enabled
+  become: true

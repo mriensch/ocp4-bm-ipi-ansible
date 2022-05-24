@@ -1,0 +1,93 @@
+apiVersion: v1
+baseDomain: {{ cluster_domain }}
+metadata:
+  name: {{ cluster_name }}
+networking:
+  machineCIDR: {{ machine_cidr }}
+  networkType: {{ network_type }}
+compute:
+- name: worker
+  replicas: 1 
+controlPlane:
+  name: master
+  replicas: 3
+  platform:
+    baremetal: {}
+platform:
+  baremetal:
+    apiVIP: {{ api_ip }}
+    ingressVIP: {{ ingress_ip }}
+    bootstrapOSImage: http://{{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}:8000/{{ rhcos_image_name }}?sha256={{ rhcos_bootstrap_image_sha }}
+    provisioningNetwork: Disabled
+    externalBridge: baremetal
+    hosts:
+{% for node in nodes %}
+      - name: {{ node.name }}
+        role: {{ node.role }}
+        bmc:
+          address: redfish-virtualmedia://{{ node.bmc_address }}/redfish/v1/Systems/1
+          username: {{ node_redfish_username }}
+          password: {{ node_redfish_password }}
+          disableCertificateVerification: True
+        bootMACAddress: {{ node.boot_mac }}
+        rootDeviceHints:
+         deviceName: /dev/nvme0n1
+        bootMode: UEFISecureBoot
+{% endfor %}
+{% for bridge in networking %}
+        networkConfig:
+          interfaces:
+          - name: {{ bridge.iface_one }}
+            description: disable {{ bridge.iface_one }}
+            type: ethernet
+            state: up
+            ipv4:
+              enabled: false
+          - name: {{ bridge.iface_two }}
+            description: disable {{ bridge.iface_two }}
+            type: ethernet
+            state: up
+            ipv4:
+              enabled: false
+          - name: bond0
+            description: Bond enslaving {{ bridge.iface_one }} and {{ bridge.iface_two }}
+            type: bond
+            state: up
+            ipv4:
+              enabled: false
+            link-aggregation:
+              mode: active-backup
+              options:
+                miimon: '140'
+              slaves:
+              - {{ bridge.iface_one }}
+              - {{ bridge.iface_two }}
+            mtu: 1450
+          - name: {{ bridge.name }}
+            description: Linux bridge with {{ bridge.bond }} as a port
+            type: linux-bridge
+            state: up
+            ipv4:
+              address:
+              - ip: {{ bridge.ip_address }}
+                prefix-length: {{ bridge.ip_prefix_length }}
+              enabled: true
+            bridge:
+              options:
+                stp:
+                  enabled: false
+              port:
+                - name: {{ bridge.bond }}
+                  vlan: {}
+{% endfor %}
+imageContentSources:
+- mirrors:
+  - {{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}:{{ registry_port }}/openshift/release
+  source: quay.io/openshift-release-dev/ocp-release
+- mirrors:
+  - {{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}:{{ registry_port }}/openshift/release
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+pullSecret: '{{ lookup('file', '{{ ansible_user_dir }}/.docker/config.json') }}'
+sshKey: '{{ lookup('file', '{{ ansible_user_dir }}/.ssh/id_ecdsa.pub') }}'
+additionalTrustBundle: |
+{{ lookup('file', '{{ registry_volume }}/certs/domain.crt') | indent( width=2, indentfirst=True)}}

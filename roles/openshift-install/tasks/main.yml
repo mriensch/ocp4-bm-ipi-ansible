@@ -1,0 +1,60 @@
+- name: "{{ role_name }} | Create the Install directories"
+  file:
+    mode: '0744'
+    path: "{{ ocp_install_dir }}"
+    state: directory 
+
+- name: "{{ role_name }} | Generate the openshift install-config.yaml"
+  template:
+    src: install-config.yml.j2
+    dest: '{{ ocp_install_dir }}/install-config.yaml'
+
+- name: copy install
+  copy:
+    src: '{{ ocp_install_dir }}/install-config.yaml'
+    dest: "{{ base_dir }}"
+
+- name: "{{ role_name }} | Generate openshift manifests files "
+  command:
+    cmd: "openshift-baremetal-install --dir {{ ocp_install_dir }} create manifests"
+ 
+- name: "{{ role_name }} | Create list of custom manifest yamls"
+  find: 
+    paths: "{{ role_path}}/files/manifests/"
+    patterns: '*.yaml,*.yml'
+  register: manifests
+
+- name: "{{ role_name }} | Copy over the custom manifest files"
+  copy: 
+    src: "{{ item.path }}"
+    dest: '{{ ocp_install_dir }}/manifests/'
+  with_items: "{{ manifests.files }}"
+
+- name: "{{ role_name }} | Create list of custom openshift yamls"
+  find: 
+    paths: "{{ role_path}}/files/openshift/"
+    patterns: '*.yaml,*.yml'
+  register: openshift
+
+- name: "{{ role_name }} | Copy over the custom openshift files"
+  copy: 
+    src: "{{ item.path }}"
+    dest: '{{ ocp_install_dir }}/openshift/'
+  with_items: "{{ openshift.files }}"
+
+- name: "{{ role_name }} | Open http on the firewall"
+  firewalld: 
+    service: http
+    permanent: no
+    immediate: yes
+    state: enabled
+  become: true
+
+- name: "{{ role_name }} | Create the Openshift cluster | Takes around 45 minutes"
+  command:
+    cmd: "openshift-baremetal-install --dir {{ ocp_install_dir }} create cluster"
+  register: ocp_install
+
+- name: "{{ role_name }} | Display output of Install | For generated password"
+  debug:
+    msg: "{{ ocp_install.stdout }}"

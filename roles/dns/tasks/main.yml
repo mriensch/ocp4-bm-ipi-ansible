@@ -1,0 +1,20 @@
+- name: "{{ role_name }} | Copy template to /etc/dnsmasq.conf"
+  template:
+    src: dnsmasq.conf.j2
+    dest: /etc/dnsmasq.conf
+  become: true
+
+- name:  "{{ role_name }} | Start and enable dnsmasqd"
+  ansible.builtin.service:
+    name: dnsmasq
+    state: started
+    enabled: yes
+  become: true
+
+- name: "{{ role_name }} | Add the dnsmasq service to the firewall permanently"
+  firewalld: 
+    service: dns
+    permanent: yes
+    immediate: yes
+    state: enabled
+  become: true

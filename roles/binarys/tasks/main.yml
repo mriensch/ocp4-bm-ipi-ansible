@@ -1,0 +1,29 @@
+- name: "{{ role_name }} | Create list of tars"
+  find:
+    paths: "{{ binary_locations }}"
+    patterns: '*.tar.gz'
+  register: binary_tars
+
+- name: "{{ role_name }} | Extract tars to {{ binary_dest }}"
+  unarchive:
+    src: "{{ item.path }}"
+    dest: "{{ binary_dest }}"
+    mode: 0755
+  with_items: "{{ binary_tars.files }}"
+  become: true
+
+- name: "{{ role_name }} | Trusting {{ binary_dest }} in fapolicyd"
+  command:
+    cmd: fapolicyd-cli --file add {{ binary_dest }}
+  become: true
+
+- name: "{{ role_name }} | Updating fapolicyd"
+  command:
+    cmd: fapolicyd-cli --update
+  become: true
+
+- name: "{{ role_name }} | Restarting fapolicyd"
+  ansible.builtin.service:
+    name: fapolicyd
+    state: restarted
+  become: true

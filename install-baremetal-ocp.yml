@@ -1,0 +1,13 @@
+- hosts: localhost
+  roles:
+  - set-hostname
+  - registry
+  - binarys
+  - networking
+  - chrony
+  - dns
+  - dhcp
+  - oc-mirror
+  - image-cache
+  - temp-web-server
+  - openshift-install

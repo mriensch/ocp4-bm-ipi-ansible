@@ -1,0 +1,14 @@
+$TTL    86400
+@       IN      SOA     {{ cluster_name }}.{{ cluster_domain }}. root.{{ cluster_name }}.{{ cluster_domain }}. (
+1997022700 ; serial
+28800      ; refresh
+14400      ; retry
+3600000    ; expire
+86400 )    ; minimum
+        IN      NS      {{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}.
+{{ ansible_default_ipv4.address.split('.')[-1] }}     IN      PTR     {{ managment_hostname }}.{{ cluster_name }}.{{ cluster_domain }}.
+{{ api_ip.split('.')[-1] }}     IN      PTR     apps.{{ cluster_name }}.{{ cluster_domain }}.
+{{ ingress_ip.split('.')[-1] }}     IN      PTR     api.{{ cluster_name }}.{{ cluster_domain }}.
+{% for node in nodes %}
+{{ node.net_address.split('.')[-1] }}     IN      PTR     {{ node.name }}.{{ cluster_name }}.{{ cluster_domain }}.
+{% endfor %}
